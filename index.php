@@ -1,4 +1,5 @@
 <?php 
+error_reporting(0);
 require('header.php'); //connects to database, loads common functions, and displays page header
 
 echo "<b>Welcome to the Washtenaw GOP Election System.</b>";
@@ -111,15 +112,49 @@ if ($govote = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `el
 	
 	
 	//generate ballot
+	
+	//Javascript to make box in lower-right that counts how many votes you have left
+	echo "\n<script>
+	function refreshLeft() {
+		var maxVotes = ". $govote['cand_num'] . ";
+		var currVotes = 0;\n";
+	$cands = mysqli_query($_SERVER['con'],"SELECT * FROM `election_cands` WHERE `electionid` = " . mrs($_REQUEST['vote']) . " ORDER BY `lastname`,`firstname`");
+	while ($cand = mysqli_fetch_array($cands))
+	{
+		echo "if (document.getElementById('cand" . $cand['id'] . "').checked == true) currVotes++;\n";
+	}		
+	
+echo "\nif ((maxVotes - currVotes) == 0) document.getElementById('votesremainingcount').innerHTML = '<span style=\'color:#090;\'>0</span>';
+	else if ((maxVotes - currVotes) < 0) document.getElementById('votesremainingcount').innerHTML = '<span style=\'color:#f00;\'>' + (maxVotes - currVotes) + '</span>';
+	else document.getElementById('votesremainingcount').innerHTML = (maxVotes - currVotes);
+	}
+	</script>
+	";
+	
+	//ballot form
 	echo "<form action='index.php' method='post'><b>Vote for no more than " . $govote['cand_num'] . " candidates</b><br><br>";
 	echo "<input type='hidden' name='vote' value='" . $_REQUEST['vote'] . "'>";
+	//little box in lower right showing how many votes you have left
+	echo "<div id='votesremaining' style='position:fixed;display:block;bottom:15px;right:10px;border:3px double #000;padding:5px;background:#ff6;'>Votes Left<br><div align='center'><big><big><b><span id='votesremainingcount'>";
+	$cands = mysqli_query($_SERVER['con'],"SELECT * FROM `election_cands` WHERE `electionid` = " . mrs($_REQUEST['vote']) . " ORDER BY `lastname`,`firstname`");
+	$voted = 0;
+	while ($cand = mysqli_fetch_array($cands))
+	{
+		if ($_REQUEST['cand' . $cand['id']] == 'Y') $voted++;
+	}		
+	if (($govote['cand_num'] - $voted) == 0) echo "<span style='color:#090;'>" . ($govote['cand_num'] - $voted) . "</span>";
+	else if (($govote['cand_num'] - $voted) < 0) echo "<span style='color:#f00;'>" . ($govote['cand_num'] - $voted) . "</span>";
+	else echo ($govote['cand_num'] - $voted);
+	echo "</span></b></big></big></div></div>";
+	
+	//list of candidates
 	echo "<table>";
 	$cands = mysqli_query($_SERVER['con'],"SELECT * FROM `election_cands` WHERE `electionid` = " . mrs($_REQUEST['vote']) . " ORDER BY `lastname`,`firstname`");
 	while ($cand = mysqli_fetch_array($cands))
 	{
-		echo "<tr><td><input type='checkbox' name='cand" . $cand['id'] . "' value='Y'";
+		echo "<tr><td><input type='checkbox' style='width:25px;height:25px;' name='cand" . $cand['id'] . "' id='cand" . $cand['id'] . "' onchange='refreshLeft()' value='Y'";
 		if ($_REQUEST['cand' . $cand['id']] == 'Y') echo " CHECKED";
-		echo "> </td><td>" . $cand['firstname'] . " " . $cand['lastname'] . "</td></tr>";
+		echo "> </td><td><big><big>" . $cand['firstname'] . " " . $cand['lastname'] . "</big></big></td></tr>";
 	}
 	echo "</table><br><br><input type='submit' name='submit' value='Review Ballot'></form><br><br>";
 	exit;
