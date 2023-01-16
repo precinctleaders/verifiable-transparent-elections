@@ -29,9 +29,7 @@ if (!$tablecheck = mysqli_query($_SERVER['con'],"SELECT * FROM `election_users`"
 	  `tmp_password` varchar(100) NOT NULL,
 	  `password` varchar(100) NOT NULL,
 	  `is_admin` varchar(1) NOT NULL,
-	  `is_approved` varchar(1) NOT NULL,
 	  `alias` varchar(50) NOT NULL,
-	  `alias_locked` varchar(1) NOT NULL,
 	  `created` DATETIME NOT NULL
 	) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
 	if (!$createtable = mysqli_query($_SERVER['con'],$createusertable)) redalert("ERROR: Could not create users table" . mysqli_error($_SERVER['con']));
@@ -114,7 +112,7 @@ if ($_POST['submit'] == 'Create Admin') if (!$admincheck = mysqli_fetch_array(my
 	$password = crypt(md5(strtolower($_POST['password']) . $_SERVER['randomness']),md5(strtolower($_POST['email'])));
 	$now = date("Y-m-d H:i:s");
 	$alias = random_str(10);
-	$createq = "INSERT INTO `election_users` (`firstname`,`lastname`,`email`,`password`,`is_approved`,`is_admin`,`created`,`alias`) VALUES ('" . mrs($_POST['firstname']) . "' , '" . mrs($_POST['lastname']) . "' , '" . mrs($_POST['email']) . "' , '" . mrs($password) . "' , 'Y' , 'Y', '" . mrs($now) . "', '" . mrs($alias) . "')";
+	$createq = "INSERT INTO `election_users` (`firstname`,`lastname`,`email`,`password`,`is_admin`,`created`,`alias`) VALUES ('" . mrs($_POST['firstname']) . "' , '" . mrs($_POST['lastname']) . "' , '" . mrs($_POST['email']) . "' , '" . mrs($password) . "' , 'Y', '" . mrs($now) . "', '" . mrs($alias) . "')";
 	if (!$createadmin = mysqli_query($_SERVER['con'],$createq)) redalert("Error: couldn't create administrator" . $createq);
 	else 
 	{
