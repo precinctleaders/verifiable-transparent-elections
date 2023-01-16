@@ -38,11 +38,6 @@ if ($govote = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `el
 {
 	//verify eligibility
 	$verify = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` WHERE `id` = " . mrs($_SESSION['id'])));
-	if ($verify['is_approved'] != 'Y') 
-	{
-		echo "ERROR: You have not yet been approved to vote. You may be approved when you check in.<br><br><a href='index.php?vote=" . $_REQUEST['vote'] . "'>Refresh this page</a><br><br>";
-		exit;
-	}
 	if (!$checkedin = mysqli_fetch_array(mysqli_query($_SERVER['con'], "SELECT * FROM `election_checkin` WHERE `userid` = " . $_SESSION['id'] . " AND `status` = 'C'")))
 	{	
 		//verify they have checked in
@@ -286,7 +281,7 @@ if ($results = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `e
 	echo "</table><br><br>";
 	echo "<b>Voter Turnout</b><br><br>";
 	echo "<table style='border:3px double #000;'><tr style='background:#000;color:#fff'><th>Name</th><th>Key</th><th>Ballot Status</th></tr>";
-	$voters = mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` WHERE `is_approved` = 'Y' ORDER BY `lastname`,`firstname`");
+	$voters = mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` ORDER BY `lastname`,`firstname`");
 	while ($voter = mysqli_fetch_array($voters))
 	{
 		if ($odd) $odd = false; //oscillate shading of rows
