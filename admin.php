@@ -91,7 +91,7 @@ if ($_REQUEST['mode'] == 'voters')
 			}
 			$names = explode(",", $voter);
 			$now = date("Y-m-d H:i:s");
-			$insq = "INSERT INTO `election_users` (`firstname`,`lastname`,`email`,`is_approved`, `created`,`alias`) VALUES ('" . mrs(trim(str_replace('"','',$names[0]))) . "' , '" . mrs(trim(str_replace('"','',$names[1]))) . "' , '" . mrs(trim(str_replace('"','',$names[2]))) . "', 'Y' , '" . mrs($now) . "', '" . mrs($alias) . "' )";
+			$insq = "INSERT INTO `election_users` (`firstname`,`lastname`,`email`, `created`,`alias`) VALUES ('" . mrs(trim(str_replace('"','',$names[0]))) . "' , '" . mrs(trim(str_replace('"','',$names[1]))) . "' , '" . mrs(trim(str_replace('"','',$names[2]))) . "', '" . mrs($now) . "', '" . mrs($alias) . "' )";
 			if (!$ins = mysqli_query($_SERVER['con'],$insq)) echo "Voter already exists: " . trim(str_replace('"','',$names[0])) . " " .trim(str_replace('"','',$names[1])) . " &lt;" . trim(str_replace('"','',$names[2])) . "&gt;<br>";
 			else 
 			{
@@ -259,7 +259,7 @@ if ((mysqli_num_rows($elections) > 0) and ($_SESSION['is_admin'] == 'Y'))
 		echo "<td>" . $election['cand_num'] . "</td>";
 		$votecount = mysqli_query($_SERVER['con'],"SELECT * FROM `election_ballots` WHERE `electionid` = " . mrs($election['id']));
 		echo "<td>" . mysqli_num_rows($votecount) . "</td>";
-		$votercount = mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` WHERE `is_approved` = 'Y'");
+		$votercount = mysqli_query($_SERVER['con'],"SELECT * FROM `election_users`");
 		echo "<td>" . mysqli_num_rows($votercount) . "</td>";
 		$checkedin = (mysqli_query($_SERVER['con'],"SELECT DISTINCT `userid` FROM `election_checkin`"));
 		echo "<td>" . mysqli_num_rows($checkedin) . "</td>";
