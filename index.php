@@ -2,7 +2,7 @@
 error_reporting(0);
 require('header.php'); //connects to database, loads common functions, and displays page header
 
-echo "<b>Welcome to the Washtenaw GOP Election System.</b>";
+echo "<h1>Washtenaw GOP Election System</h1>";
 //Users can always click this to return to the main menu
 echo "<br>[<a href='index.php'>Home/Refresh page</a>]<br><br>"; 
 
@@ -15,7 +15,7 @@ if ($_SESSION['is_logged_in'] != 'Y')
 	<form action='index.php' method='post'>
 	<table><tr><td>User: </td><td><input type='text' name='email'></td></tr>
 	<tr><td>Password: </td><td><input type='password' name = 'password'></td></tr>
-	<tr><td><input type='submit' name='submit' value='Log In'</td></tr></table>
+	<tr><td><input class='big-btn' type='submit' name='submit' value='Log In'</td></tr></table>
 	</form>
 	(If you forgot your password, you can reset it at the check-in desk.)
 	
@@ -101,7 +101,7 @@ if ($govote = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `el
 					echo "<input type='hidden' name='cand" . $cand['id'] . "' value='Y'>";
 				}
 			}
-			echo "<input type='submit' name='submit' value='Cast Ballot'></div></form><br><br>";
+			echo "<input class='big-btn' type='submit' name='submit' value='Cast Ballot'></div></form><br><br>";
 		}
 	}
 	
@@ -126,11 +126,8 @@ echo "\nif ((maxVotes - currVotes) == 0) document.getElementById('votesremaining
 	</script>
 	";
 	
-	//ballot form
-	echo "<form action='index.php' method='post'><b>Vote for no more than " . $govote['cand_num'] . " candidates</b><br><br>";
-	echo "<input type='hidden' name='vote' value='" . $_REQUEST['vote'] . "'>";
 	//little box in lower right showing how many votes you have left
-	echo "<div id='votesremaining' style='position:fixed;display:block;bottom:15px;right:10px;border:3px double #000;padding:5px;background:#ff6;'>Votes Left<br><div align='center'><big><big><b><span id='votesremainingcount'>";
+	echo "<div id='votesremaining'>Votes Left<br><div align='center'><b><span id='votesremainingcount'>";
 	$cands = mysqli_query($_SERVER['con'],"SELECT * FROM `election_cands` WHERE `electionid` = " . mrs($_REQUEST['vote']) . " ORDER BY `lastname`,`firstname`");
 	$voted = 0;
 	while ($cand = mysqli_fetch_array($cands))
@@ -140,18 +137,23 @@ echo "\nif ((maxVotes - currVotes) == 0) document.getElementById('votesremaining
 	if (($govote['cand_num'] - $voted) == 0) echo "<span style='color:#090;'>" . ($govote['cand_num'] - $voted) . "</span>";
 	else if (($govote['cand_num'] - $voted) < 0) echo "<span style='color:#f00;'>" . ($govote['cand_num'] - $voted) . "</span>";
 	else echo ($govote['cand_num'] - $voted);
-	echo "</span></b></big></big></div></div>";
+	echo "</span></b></div></div>";
+
+	//ballot form
+	echo "<form class='ballot' action='index.php' method='post'><b>Vote for no more than " . $govote['cand_num'] . " candidates</b><br><br>";
+	echo "<input type='hidden' name='vote' value='" . $_REQUEST['vote'] . "'>";
 	
 	//list of candidates
 	echo "<table>";
 	$cands = mysqli_query($_SERVER['con'],"SELECT * FROM `election_cands` WHERE `electionid` = " . mrs($_REQUEST['vote']) . " ORDER BY `lastname`,`firstname`");
 	while ($cand = mysqli_fetch_array($cands))
 	{
-		echo "<tr><td><input type='checkbox' style='width:25px;height:25px;' name='cand" . $cand['id'] . "' id='cand" . $cand['id'] . "' onchange='refreshLeft()' value='Y'";
-		if ($_REQUEST['cand' . $cand['id']] == 'Y') echo " CHECKED";
-		echo "> </td><td><big><big>" . $cand['firstname'] . " " . $cand['lastname'] . "</big></big></td></tr>";
+		echo "<tr><td class='candidate'>" .
+			"<input type='checkbox' class='checkbox' name='cand" . $cand['id'] . "' id='cand" . $cand['id'] . "' onchange='refreshLeft()' value='Y'>";
+		echo "<label class='label' for='cand" . $cand['id'] . "'>";
+		echo $cand['firstname'] . " " . $cand['lastname'] . "</label></td></tr>";
 	}
-	echo "</table><br><br><input type='submit' name='submit' value='Review Ballot'></form><br><br>";
+	echo "</table><br><br><input class='big-btn' type='submit' name='submit' value='Review Ballot'></form><br><br>";
 	exit;
 }
 
