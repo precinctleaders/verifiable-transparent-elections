@@ -98,12 +98,13 @@ if ($_REQUEST['logout'] == 'Y')
 	<meta property="og:title" content="Washtenaw GOP Voting System">
 	<meta property="og:type" content="website">
 	<meta property="og:description" content="Welcome to Our Voting System">
-	<link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet" type="text/css">
+	<!-- link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet" type="text/css" -->
 	<style type='text/css'>
 		html, body { font-size: 16px; }
 		body {
 			font-size: 1.25rem;
-			font-family: Montserrat, Helvetica, Arial, sans-serif;
+      /* font-family: Montserrat, Helvetica, Arial, sans-serif; */
+			font-family: Helvetica, Arial, sans-serif;
 		}
 		div { max-width: 90vw; }
 		h1, h2, h3, h4, h5, h6 { font-family: serif; }
