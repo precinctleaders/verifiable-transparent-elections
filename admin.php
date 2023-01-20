@@ -129,7 +129,7 @@ if ($_REQUEST['mode'] == 'checkin')
 		<script>
 		function printcontent(){
 			var restorepage=document.body.innerHTML;
-			var printcontent="Welcome to our County Convention.<br><br>If you have a phone with a web browser,<br><br>Step 1: Go to<br>https://washtenawgop.org/<br><br>Enter this as the User: <div align='center'><b><?php echo $tocheckin['email']; ?></b></div>And this password:<br><div align='center'><big><big><big><b><?php echo $temppw;?></b></big></big></big></div> and login.<br><br>Step 2: Change your <br>password immediately.<br><br>Step 3: Wait for the polls to open, refresh the <br>home page, and vote.<br><br>Step 4: Wait for the polls to close, refresh the <br>home page, and verify <br>the results.<br><br> If you do NOT have a phone, you can do all of this at a provided computer once voting opens.";
+			var printcontent="Welcome to our County Convention.<br><br>If you have a phone with a web browser,<br><br>Step 1: Go to<br>washtenawgop.org<br><br>Enter this as the User: <div align='center'><b><?php echo $tocheckin['email']; ?></b></div>And this password:<br><div align='center'><big><big><big><b><?php echo $temppw;?></b></big></big></big></div> and login.<br><br>Step 2: Change your <br>password immediately.<br><br>Step 3: Wait for the polls to open, refresh the <br>home page, and vote.<br><br>Step 4: Wait for the polls to close, refresh the <br>home page, and verify <br>the results.<br><br> If you do NOT have a phone, you can do all of this at a provided computer once voting opens.";
 			document.body.innerHTML = printcontent;
 			window.print();
 			document.body.innerHTML = restorepage;
