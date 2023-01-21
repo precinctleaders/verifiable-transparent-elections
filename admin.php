@@ -5,19 +5,30 @@
 //The $_SESSION['is_admin'] variable is set to Y for master admin and X for CC members.
 
 $uri = explode("/",$_SERVER['PHP_SELF']);
-if ($uri[(count($uri)-1)] != 'index.php') die('Hacking attempt.');
-if (!in_array($_SESSION['is_admin'], array("Y","X"))) die('Hacking attempt.');
-echo "<div style='background:#efe;padding:10px;border:1px solid #000;'><b>Administrative Tools</b><br><br>";
+if ($uri[(count($uri)-1)] != 'index.php') die('Hacking attempt.'); //this page can only be called from the one master web page and will otherwise stop
+if (!in_array($_SESSION['is_admin'], array("Y","X"))) die('Hacking attempt.'); //only logged in admins can access this page
+
+if (($_SESSION['is_admin'] == 'Y') and ($_REQUEST['do'] == 'closeprogram'))
+{
+	//finalize the results, generate the final canvassing report, and permanently anonymize all ballots.
+	//this is a big function so it is in its own code file.
+	require('finalize.php');
+	exit;
+}
+
+
+echo "<div class='admin-tools'><b>Administrative Tools</b><br><br>";
 
 //only master admin can do these
 
 if ($_SESSION['is_admin'] =='Y')
 {
-	if ($surr = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` WHERE `id` = " . mrs($_REQUEST['surrender']))))
+	
+	if ($surr = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_voters` WHERE `id` = " . mrs($_REQUEST['surrender']))))
 	{
 		//process surrendering of chair
-		$make = mysqli_query($_SERVER['con'], "UPDATE `election_users` SET `is_admin` = 'Y' WHERE `id` = " . mrs($_REQUEST['surrender']));
-		$unmake = mysqli_query($_SERVER['con'], "UPDATE `election_users` SET `is_admin` = '' WHERE `id` = " . mrs($_SESSION['id']));
+		$make = mysqli_query($_SERVER['con'], "UPDATE `election_voters` SET `is_admin` = 'Y' WHERE `id` = " . mrs($_REQUEST['surrender']));
+		$unmake = mysqli_query($_SERVER['con'], "UPDATE `election_voters` SET `is_admin` = '' WHERE `id` = " . mrs($_SESSION['id']));
 		$_SESSION['is_admin'] = '';
 		redalert("You have passed the torch. Now go sit down.");
 		exit;
@@ -53,7 +64,7 @@ if ($_SESSION['is_admin'] =='Y')
 		//create an election
 		if ($_POST['submit'] == 'Create Election')
 		{
-			if (!$create = mysqli_query($_SERVER['con'], "INSERT INTO `election_elections` (`name`,`date`,`cand_num`) VALUES ('" . mrs($_REQUEST['name']) . "' , '" . mrs($_REQUEST['date']) . "', " . mrs($_REQUEST['cand_num']) . ")")) redalert("Failed to create election.");
+			if (!$create = mysqli_query($_SERVER['con'], "INSERT INTO `election_elections` (`name`,`cand_num`) VALUES ('" . mrs($_REQUEST['name']) . "' , " . mrs($_REQUEST['cand_num']) . ")")) redalert("Failed to create election.");
 			else
 			{
 				//election created successfully, generate random secret alias key
@@ -66,7 +77,6 @@ if ($_SESSION['is_admin'] =='Y')
 		}
 		echo "<form action='index.php' method='post'><input type='hidden' name='mode' value='createelection'>
 		<table><tr><td>Election Name: </td><td><input type='text' name='name'></td></tr>
-		<tr><td>Election Date YYYY-MM-DD: </td><td><input type='text' name='date'></td></tr>
 		<tr><td>Number of candidates to vote for: </td><td><input type='text' name='cand_num'></td></tr>
 		<tr><td><input type='submit' name='submit' value='Create Election'></td></tr></table>
 		</form>
@@ -84,14 +94,14 @@ if ($_REQUEST['mode'] == 'voters')
 		{
 			//Generate random alias
 			$alias = random_str(10);
-			while ($dupe = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` WHERE `alias` = '" . $alias . "'")))
+			while ($dupe = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_voters` WHERE `alias` = '" . $alias . "'")))
 			{
 				//retry until unique combination
 				$alias = random_str(10);
 			}
 			$names = explode(",", $voter);
 			$now = date("Y-m-d H:i:s");
-			$insq = "INSERT INTO `election_users` (`firstname`,`lastname`,`email`, `created`,`alias`) VALUES ('" . mrs(trim(str_replace('"','',$names[0]))) . "' , '" . mrs(trim(str_replace('"','',$names[1]))) . "' , '" . mrs(trim(str_replace('"','',$names[2]))) . "', '" . mrs($now) . "', '" . mrs($alias) . "' )";
+			$insq = "INSERT INTO `election_voters` (`firstname`,`lastname`,`username`, `created`,`alias`) VALUES ('" . mrs(trim(str_replace('"','',$names[0]))) . "' , '" . mrs(trim(str_replace('"','',$names[1]))) . "' , '" . mrs(trim(str_replace('"','',$names[2]))) . "', '" . mrs($now) . "', '" . mrs($alias) . "' )";
 			if (!$ins = mysqli_query($_SERVER['con'],$insq)) echo "Voter already exists: " . trim(str_replace('"','',$names[0])) . " " .trim(str_replace('"','',$names[1])) . " &lt;" . trim(str_replace('"','',$names[2])) . "&gt;<br>";
 			else 
 			{
@@ -105,7 +115,7 @@ if ($_REQUEST['mode'] == 'voters')
 	
 	//import eligible voters
 	echo "<b>Import Voters</b> &ndash; [<a href='index.php'>Back to main menu</a>]<br><br>";
-	echo "Paste the contents of a CSV file to import eligible voters. Use this format: First Name, Last Name, Email<br><br>
+	echo "Paste the contents of a CSV file to import eligible voters. Use this format: First Name, Last Name, Username<br><br>
 	<form action='index.php' method='post'><input type='hidden' name='mode' value='voters'>
 	<textarea name='voters' rows='10' cols='80'></textarea>
 	<br><input type='submit' name='submit' value='Import Voters'>
@@ -117,19 +127,19 @@ if ($_REQUEST['mode'] == 'checkin')
 {
 	$now = date("Y-m-d H:i:s"); //outputs current time in standard format, eg 2022-12-13 12:55:32
 	echo "<a name='checkin'></a>";
-	if ($tocheckin = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` WHERE `id` = " . mrs($_REQUEST['tocheckin']))))
+	if ($tocheckin = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_voters` WHERE `id` = " . mrs($_REQUEST['tocheckin']))))
 	{
 		//execute checkin and generate temp password
 		$temppw = rand(100000,999999);
-		$temp_enc = crypt(md5(strtolower($temppw) . $_SERVER['randomness']),md5(strtolower($tocheckin['email'])));
-		$upduser = mysqli_query($_SERVER['con'],"UPDATE `election_users` SET `tmp_password` = '" . mrs($temp_enc) . "' WHERE `id` = " . mrs($tocheckin['id']));
-		$chkin = mysqli_query($_SERVER['con'],"INSERT INTO `election_checkin` (`userid`,`checkin_time`,`status`) VALUES ( " . mrs($tocheckin['id']) . " , '" . mrs($now) . "', 'C')");
+		$temp_enc = crypt(md5(strtolower($temppw) . $_SERVER['randomness']),md5(strtolower($tocheckin['username'])));
+		$upduser = mysqli_query($_SERVER['con'],"UPDATE `election_voters` SET `password` = '" . mrs($temp_enc) . "' WHERE `id` = " . mrs($tocheckin['id']));
+		$chkin = mysqli_query($_SERVER['con'],"INSERT INTO `election_checkin` (`userid`,`checkin_time`) VALUES ( " . mrs($tocheckin['id']) . " , '" . mrs($now) . "')");
 		echo "<button id='printme' name='printme' value='Click to print check-in info' onclick = 'printcontent()'>Print check-in info for " . $tocheckin['firstname'] . " " . $tocheckin['lastname'] . "</button>";
 		?>
 		<script>
 		function printcontent(){
 			var restorepage=document.body.innerHTML;
-			var printcontent="Welcome to our County Convention.<br><br>If you have a phone with a web browser,<br><br>Step 1: Go to<br>thewebsite.com/election/<br><br>Enter this as the User: <div align='center'><b><?php echo $tocheckin['email']; ?></b></div>And this password:<br><div align='center'><big><big><big><b><?php echo $temppw;?></b></big></big></big></div> and login.<br><br>Step 2: Change your <br>password immediately.<br><br>Step 3: Wait for the polls to open, refresh the <br>home page, and vote.<br><br>Step 4: Wait for the polls to close, refresh the <br>home page, and verify <br>the results.<br><br> If you do NOT have a phone, you can do all of this at a provided computer once voting opens.";
+			var printcontent="Welcome to our County Convention.<br><br>If you have a phone with a web browser,<br><br>Step 1: Go to<br><b>washtenawgop.org</b><br><br>Enter this as the User: <div align='center'><b><?php echo $tocheckin['username']; ?></b></div>And this password:<br><div align='center'><big><big><big><b><?php echo $temppw;?></b></big></big></big></div> and login.<br><br>Step 2: Change your <br>password if desired.<br><br>Step 3: Wait for the polls to open, refresh the <br>home page, and vote.<br><br>Step 4: Wait for the polls to close, refresh the <br>home page, and verify <br>the results.<br><br> If you do NOT have a phone, you can do all of this at a provided computer once voting opens.";
 			document.body.innerHTML = printcontent;
 			window.print();
 			document.body.innerHTML = restorepage;
@@ -141,19 +151,19 @@ if ($_REQUEST['mode'] == 'checkin')
 	if ((is_numeric($_REQUEST['makeadmin'])) and ($_SESSION['is_admin'] == 'Y'))
 	{
 		//promote user to admin. Only master admin can do this.
-		if ($make = mysqli_fetch_array(mysqli_query($_SERVER['con'], "SELECT * FROM `election_users` WHERE `is_admin` = '' AND `id` = " . mrs($_REQUEST['makeadmin']))))
+		if ($make = mysqli_fetch_array(mysqli_query($_SERVER['con'], "SELECT * FROM `election_voters` WHERE `is_admin` = '' AND `id` = " . mrs($_REQUEST['makeadmin']))))
 		{
-			if ($promote = mysqli_query($_SERVER['con'],"UPDATE `election_users` SET `is_admin` = 'X' WHERE `id` = " . mrs($make['id']))) redalert($make['firstname'] . " " . $make['lastname'] . " promoted to Credentials Committee successfully.");
+			if ($promote = mysqli_query($_SERVER['con'],"UPDATE `election_voters` SET `is_admin` = 'X' WHERE `id` = " . mrs($make['id']))) redalert($make['firstname'] . " " . $make['lastname'] . " promoted to Credentials Committee successfully.");
 		}
 	}
 		
 	if (is_numeric($_REQUEST['remove'])) 
 	{
-		if ($toremove = mysqli_fetch_array(mysqli_query($_SERVER['con'], "SELECT * FROM `election_users` WHERE `is_admin` = '' AND `id` = " . mrs($_REQUEST['remove']))))
+		if ($toremove = mysqli_fetch_array(mysqli_query($_SERVER['con'], "SELECT * FROM `election_voters` WHERE `is_admin` = '' AND `id` = " . mrs($_REQUEST['remove']))))
 		{
 		//delete a duplicate user
 		
-			if ($del = mysqli_query($_SERVER['con'],"DELETE FROM `election_users` WHERE `id` = " . mrs($toremove['id']))) redalert($toremove['firstname'] . " " . $toremove['lastname'] . " deleted successfully.");
+			if ($del = mysqli_query($_SERVER['con'],"DELETE FROM `election_voters` WHERE `id` = " . mrs($toremove['id']))) redalert($toremove['firstname'] . " " . $toremove['lastname'] . " deleted successfully.");
 		}
 	}
 	
@@ -163,29 +173,36 @@ if ($_REQUEST['mode'] == 'checkin')
 	<br><br>That's it!
 	
 	<br><br>";	
-	echo "<table>";
-	$users = mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` ORDER BY `lastname`,`firstname`");
+	echo "<table><tr style='background:#000;color:#fff;'><td>First Name</td><td>Last Name</td><td>Username</td><td>Status</td><td colspan='3'>Operation</td></tr>";
+	$users = mysqli_query($_SERVER['con'],"SELECT * FROM `election_voters` ORDER BY `lastname`,`firstname`");
 	while ($user = mysqli_fetch_array($users))
 	{
 		if ($odd) $odd = false;
 		else $odd = true; //oscillate shading of rows
 		if ($odd) echo "<tr style='background:#eee;'>";
 		else echo "<tr style='background:#fff;'>";
-		echo "<td>" . $user['firstname'] . "</td><td>" . $user['lastname'] . "</td><td>" . $user['email'] . "</td>";
+		echo "<td>" . $user['firstname'] . "</td><td>" . $user['lastname'] . "</td><td>" . $user['username'] . "</td>";
+		$chkdin = false;
 		if ($chk = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_checkin` WHERE `userid` = " . mrs($user['id']) )))
 		{
-			echo "<td style='background:#efe;'><b>Checked in</b> <a href='index.php?mode=checkin&tocheckin=" . $user['id'] . "'>Reset temp login</a></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='index.php?mode=checkin&remove=" . $user['id'] . "'>Delete voter</a></td>";
+			$chkdin = true;
+			echo "<td style='background:#efe;' align='center'>&nbsp;&nbsp;<b>Checked in</b>&nbsp;&nbsp;</td><td>&nbsp;&nbsp;<a href='index.php?mode=checkin&tocheckin=" . $user['id'] . "'>Reset temp login</a>&nbsp;&nbsp;</td>";
 		}
-		else if ($user['tmp_password'] == '')
+		else
 		{
-			echo "<td>Registered. <a href='index.php?mode=checkin&tocheckin=" . $user['id'] . "'>Check in voter</a></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='index.php?mode=checkin&remove=" . $user['id'] . "'>Delete voter</a></td>";
+			echo "<td align='center'>&nbsp;&nbsp;Registered&nbsp;&nbsp;</td><td align='center'>&nbsp;&nbsp;<a href='index.php?mode=checkin&tocheckin=" . $user['id'] . "#checkin'>Check in voter</a>&nbsp;&nbsp;</td>";
 		}
 		if ($_SESSION['is_admin'] == 'Y')
 		{
-			//only master admin can make credentials committee members
-			if ($user['is_admin'] != 'Y') echo "<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href='index.php?mode=checkin&makeadmin=" . $user['id'] . "'>Make C.C.</a></td>";
-			else echo "<td><b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Is C.C.</b></td>";
+			//only master admin can make credentials committee members and delete voters
+			if ($user['is_admin'] == '') 
+			{
+				if (!$chkdin) echo "<td>&nbsp;&nbsp;&nbsp;<a href='index.php?mode=checkin&remove=" . $user['id'] . "'>Delete voter</a>&nbsp;&nbsp;&nbsp;</td><td> </td>";
+				else echo "<td> </td><td>&nbsp;&nbsp;&nbsp;<a href='index.php?mode=checkin&makeadmin=" . $user['id'] . "'>Make C.C.</a>&nbsp;&nbsp;&nbsp;</td>";
+			}
+			else echo "<td> </td><td><div align='center'><b>&nbsp;&nbsp;&nbsp;Is C.C.</b>&nbsp;&nbsp;&nbsp;</div></td>";
 		}
+		else echo "<td></td>";
 		echo "</tr>";
 	}
 	echo "</table><br><br>";
@@ -246,20 +263,20 @@ if ($_SESSION['is_admin'] == 'Y')
 if ($_SESSION['is_admin'] == 'Y') echo "<a href='index.php?mode=createelection'>Create an election</a><br><br>";
 echo "<a href='index.php?mode=voters'>Register voters</a><br><br>";
 echo "<a href='index.php?mode=checkin'>Check in voters</a><br><br>";
-$elections = mysqli_query($_SERVER['con'], "SELECT * FROM `election_elections` ORDER BY `date`");
+$elections = mysqli_query($_SERVER['con'], "SELECT * FROM `election_elections` ORDER BY `id`");
 if ((mysqli_num_rows($elections) > 0) and ($_SESSION['is_admin'] == 'Y'))
 {
-	echo "<b>Elections</b><br><br><table><tr><th>Name</th><th>Date</th><th>Candidates</th><th>VoteMax</th><th>Ballots Cast</th><th>Registered</th><th>Present</th><th>Status</th><th>Operations</th><th>Key (partial)</th></tr>";
+	echo "<b>Elections</b><br><br><table><tr><th>Name</th><th>Candidates</th><th>VoteMax</th><th>Ballots Cast</th><th>Registered</th><th>Present</th><th>Status</th><th>Operations</th><th>Key (partial)</th></tr>";
 	while ($election = mysqli_fetch_array($elections)) 
 	{
 		$ekey = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_randomseed` WHERE `key` = '" . mrs($election['id']) . "'"));
-		echo "<tr><td><b>" . $election['name'] . "</b></td><td>" . nicedate($election['date']) . "</td>";
+		echo "<tr><td><b>" . $election['name'] . "</b></td>";
 		$cands = mysqli_query($_SERVER['con'],"SELECT * FROM `election_cands` WHERE `electionid` = " . mrs($election['id']));
 		echo "<td><a href='index.php?cands=" . $election['id'] . "'>" . mysqli_num_rows($cands) . " [edit]</a></td>";
 		echo "<td>" . $election['cand_num'] . "</td>";
 		$votecount = mysqli_query($_SERVER['con'],"SELECT * FROM `election_ballots` WHERE `electionid` = " . mrs($election['id']));
 		echo "<td>" . mysqli_num_rows($votecount) . "</td>";
-		$votercount = mysqli_query($_SERVER['con'],"SELECT * FROM `election_users`");
+		$votercount = mysqli_query($_SERVER['con'],"SELECT * FROM `election_voters`");
 		echo "<td>" . mysqli_num_rows($votercount) . "</td>";
 		$checkedin = (mysqli_query($_SERVER['con'],"SELECT DISTINCT `userid` FROM `election_checkin`"));
 		echo "<td>" . mysqli_num_rows($checkedin) . "</td>";
@@ -277,11 +294,21 @@ if ((mysqli_num_rows($elections) > 0) and ($_SESSION['is_admin'] == 'Y'))
 if ($_SESSION['is_admin'] == 'Y')
 {
 	//form for chairman to surrender chair to someone else
-	echo "<br><br><form action='index.php' method='post'><b>Surrender the chair?!</b> 
-	<select name='surrender'><option value=''>No way!</option>";
-	$users = mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` WHERE `is_admin` != 'Y' ORDER BY `lastname`,`firstname`");
+	echo "<br><br><form action='index.php' method='post'><b>Surrender the chair to: </b> 
+	<select name='surrender'><option value=''>---</option>";
+	$users = mysqli_query($_SERVER['con'],"SELECT * FROM `election_voters` WHERE `is_admin` != 'Y' ORDER BY `lastname`,`firstname`");
 	while ($user = mysqli_fetch_array($users)) echo "<option value='" . $user['id'] . "'>" . $user['lastname'] . ", " . $user['firstname'] . "</option>";
 	echo "</select> <input type='submit' name='submit' value='Don&apos;t click this accidentally'></form>";
+	
+	//form to close all elections for the night and generate final report, as long as there has been an election and it is closed
+	$elections = mysqli_query($_SERVER['con'],"SELECT `status` FROM `election_elections`");
+	$noneopen = true;
+	while ($election = mysqli_fetch_array($elections)) if ($election['status'] != 'C') $noneopen=false;
+	if ($noneopen and (mysqli_num_rows($elections) > 0))
+	{
+		echo "<br><b><a href='index.php?do=closeprogram'>Finalize all elections and generate final report</a></b><br>";
+	}
+	
 }
 
 echo "</div><br>";
