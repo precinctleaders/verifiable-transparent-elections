@@ -22,7 +22,7 @@ function mrs($inp) {
 function hasdbtable($tablename) {
   $r = mysqli_query(
     $_SERVER['con'],
-    "SELECT EXISTS(SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAM    E = '" . $tablename . "')"
+    "SELECT EXISTS(SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = '" . $tablename . "')"
   );
   if (!$r) {
     return false;
@@ -35,12 +35,6 @@ function hasdbtable($tablename) {
   } finally {
     $r -> close();
   }
-}
-
-function nicedate($stamp)
-{
-	//  convert YYYY-MM-DD to MM/DD/YY
-	return $stamp[5].$stamp[6]."/".$stamp[8].$stamp[9]."/".$stamp[2].$stamp[3];
 }
 
 function redalert($text) {
@@ -173,7 +167,7 @@ if ($_REQUEST['logout'] == 'Y')
 
 <?
 //Check to see if the database has been set up. If not, run the installation program and nothing else.
-if (!$admincheck = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` WHERE `is_admin` = 'Y'")))
+if (!$admincheck = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_voters` WHERE `is_admin` = 'Y'")))
 {
 	require('install.php');
 	exit;
@@ -182,7 +176,7 @@ if (!$admincheck = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FRO
 if (is_numeric($_SESSION['id']))
 {
 	//double-check admin status every time page refreshes
-	if ($self = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_users` WHERE `id` = " . mrs($_SESSION['id']))))
+	if ($self = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_voters` WHERE `id` = " . mrs($_SESSION['id']))))
 	{
 		$_SESSION['is_admin'] = $self['is_admin'];
 	}
