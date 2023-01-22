@@ -1,6 +1,6 @@
 <?php
 $uri = explode("/",$_SERVER['PHP_SELF']);
-if ($uri[(count($uri)-1)] != 'index.php') die('Hacking attempt.');
+if ($uri[(count($uri)-1)] != 'index.php') die('Hacking attempt.'); //this page can only be called from the one master web page and will otherwise stop
 
 //create random string for this installation to seed encryption.
 if (!$tablecheck = mysqli_query($_SERVER['con'],"SELECT * FROM `election_randomseed`"))
@@ -83,8 +83,22 @@ if (!$tablecheck = mysqli_query($_SERVER['con'],"SELECT * FROM `election_ballots
 	if (!$addidex = mysqli_query($_SERVER['con'], "ALTER TABLE `election_ballots` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;")) redalert("ERROR: Could not create primary key on ballots table");
 	if (!$addidex = mysqli_query($_SERVER['con'], "ALTER TABLE `election_ballots` ADD UNIQUE(`electionid`, `alias`);")) redalert("ERROR: Could not create unique ballot key on ballots table");
 }
-if ($_POST['submit'] == 'Create Admin') if (!$admincheck = mysqli_fetch_array(mysqli_query($_SERVER['con'],"SELECT * FROM `election_voters` WHERE `is_admin` = 'Y'")))
-if (!$tablecheck = mysqli_query($_SERVER['con'],"SELECT * FROM `election_checkin` WHERE 1"))
+
+if (!$tablecheck = mysqli_query($_SERVER['con'],"SELECT * FROM `election_ballots_cast`"))
+{
+	//create table of ballots cast (needed for final report -- only confirms who voted in which elections)
+	$createballotscasttable = "
+	CREATE TABLE IF NOT EXISTS `election_ballots_cast` (
+	  `id` int(11) NOT NULL,
+	  `voterid` int(11) NOT NULL,
+	  `electionid` int(11) NOT NULL
+	) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
+	if (!$createtable = mysqli_query($_SERVER['con'],$createballotscasttable)) redalert("ERROR: Could not create ballots cast table" . mysqli_error($_SERVER['con']));
+	if (!$addidex = mysqli_query($_SERVER['con'], "ALTER TABLE `election_ballots_cast` ADD PRIMARY KEY (`id`)")) redalert("ERROR: Could not create primary key on ballots cast table");
+	if (!$addidex = mysqli_query($_SERVER['con'], "ALTER TABLE `election_ballots_cast` ADD UNIQUE(`voterid`, `electionid`);")) redalert("ERROR: Could not create unique candidate index on candidates table");
+}
+
+if (!$tablecheck = mysqli_query($_SERVER['con'],"SELECT * FROM `election_checkin`"))
 {
 	//create check-in table
 	$createballottable = "
