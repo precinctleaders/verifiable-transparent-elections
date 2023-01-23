@@ -26,6 +26,14 @@ if ($_REQUEST['goforit'] != 'Y')
 require('pdf.php');	// PDF generation library
 
 $outfilename = date("Y-m-d") . "convention.pdf";
+if (file_exists($outfilename))
+{
+	//if the report has already been generated, do not generate it again
+	echo "<table align='center' style='border:10px #600; border-style:ridge; border-radius:15px; width:80%; min-height:80%; box-shadow: 12px 12px 12px #999;'><tr><td style='border-radius:5px; background-image:linear-gradient(#d90, #ff0);color:#000;padding:20px;'><div align='center' valign='middle'>
+<big><big><big><big><big><b>The report was already generated.<br><br>It's available here:<br><br><a style='color:#300' href='https://" . $_SERVER['HTTP_HOST'] . "/" . $outfilename . "' target='_blank'>" . $_SERVER['HTTP_HOST'] . "/" . $outfilename . "</a>
+</b></big></big></big></big></big></td></tr></table><br><br>";
+	exit;
+}
 
 $pdf=new PDF('P');
 $pdf->AliasNbPages();
@@ -228,9 +236,6 @@ foreach ($dir as $file)
 	//handle filenames with periods
 	$pieces = explode(".",$file);
 	if (count($pieces) == 1) continue; //folder not file
-	//$filefirst = $pieces[0];
-	//for ($x = 1; $x < (count($pieces) - 1);$x++) $filefirst .= "." . $pieces[$x];
-	//$fullfilename =	$filefirst . "." . $pieces[(count($pieces)-1)] . "<br>";
 	if (!$currfile = fopen($file,'r')) redalert("Error: cannot open file " . $file);
 	$txt=fread($currfile,filesize($file));
 	fclose($currfile);	
