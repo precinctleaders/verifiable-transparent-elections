@@ -95,6 +95,7 @@ if (!$tablecheck = mysqli_query($_SERVER['con'],"SELECT * FROM `election_ballots
 	) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
 	if (!$createtable = mysqli_query($_SERVER['con'],$createballotscasttable)) redalert("ERROR: Could not create ballots cast table" . mysqli_error($_SERVER['con']));
 	if (!$addidex = mysqli_query($_SERVER['con'], "ALTER TABLE `election_ballots_cast` ADD PRIMARY KEY (`id`)")) redalert("ERROR: Could not create primary key on ballots cast table");
+	if (!$addidex = mysqli_query($_SERVER['con'], "ALTER TABLE `election_ballots_cast` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;")) redalert("ERROR: Could not create primary key on ballots cast table");
 	if (!$addidex = mysqli_query($_SERVER['con'], "ALTER TABLE `election_ballots_cast` ADD UNIQUE(`voterid`, `electionid`);")) redalert("ERROR: Could not create unique candidate index on candidates table");
 }
 
